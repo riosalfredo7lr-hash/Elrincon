@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sistema Facturador</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f2f4f7;
+    --card:#ffffff;
+    --primary:#2563eb;
+    --primary-dark:#1d4ed8;
+    --danger:#dc2626;
+    --danger-dark:#b91c1c;
+    --success:#16a34a;
+    --whatsapp:#25D366;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding-bottom:40px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header.appbar{
+    background:var(--primary);
+    color:#fff;
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;
+    top:0;
+    z-index:50;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+  }
+  header.appbar h1{font-size:1.15rem;margin:0;font-weight:700;}
+  header.appbar .back-btn{
+    background:rgba(255,255,255,.18);
+    border:none;color:#fff;padding:8px 12px;border-radius:10px;
+    font-size:.95rem;cursor:pointer;
+  }
+  .container{max-width:760px;margin:0 auto;padding:16px;}
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+    border:1px solid var(--border);
+  }
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    border:none;border-radius:12px;
+    padding:12px 16px;
+    font-size:1rem;font-weight:600;
+    cursor:pointer;
+    transition:background .15s, transform .05s;
+    -webkit-user-select:none;user-select:none;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-secondary{background:#e5e7eb;color:var(--text);}
+  .btn-secondary:hover{background:#d1d5db;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger:hover{background:var(--danger-dark);}
+  .btn-success{background:var(--success);color:#fff;}
+  .btn-whatsapp{background:var(--whatsapp);color:#fff;}
+  .btn-block{width:100%;}
+  .btn-sm{padding:8px 10px;font-size:.85rem;border-radius:10px;}
+  .btn-icon{background:transparent;border:none;font-size:1.1rem;cursor:pointer;padding:6px 8px;border-radius:8px;}
+  .btn-icon:hover{background:#f0f1f3;}
+
+  input[type=text], input[type=tel], input[type=number], input[type=date], input[type=month], select, textarea{
+    width:100%;
+    padding:12px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:1rem;
+    background:#fff;
+    color:var(--text);
+    margin-top:4px;
+    font-family:inherit;
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--primary);outline-offset:0;}
+  label{font-size:.82rem;color:var(--muted);font-weight:600;display:block;margin-top:10px;}
+  .field-group{margin-bottom:4px;}
+
+  .row{display:flex;gap:10px;}
+  .row > *{flex:1;}
+
+  .top-actions{display:flex;gap:10px;margin-bottom:14px;}
+  .search-wrap{margin-bottom:14px;}
+
+  /* Dashboard */
+  .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;}
+  .dashboard-card{
+    background:#fff;border:1px solid var(--border);border-radius:18px;
+    padding:26px 12px;text-align:center;cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .dashboard-card:active{transform:scale(.97);}
+  .dashboard-card .icon{font-size:2.1rem;margin-bottom:8px;}
+  .dashboard-card .title{font-weight:700;font-size:.92rem;line-height:1.25;}
+
+  .view-toggle{display:flex;gap:8px;margin-bottom:14px;}
+  .view-toggle button{
+    flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+    background:#fff;color:var(--text);font-weight:600;font-size:.9rem;cursor:pointer;
+  }
+  .view-toggle button.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .map-empty-note{text-align:center;color:var(--muted);font-size:.85rem;padding:10px;}
+  .leaflet-popup-content{margin:10px 12px;}
+
+  .client-item{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;
+  }
+  .client-info{flex:1;min-width:0;}
+  .client-info .name{font-weight:700;font-size:1.02rem;}
+  .client-info .meta{color:var(--muted);font-size:.85rem;margin-top:2px;word-break:break-word;}
+  .client-info .code-badge{
+    display:inline-block;background:#eff4ff;color:var(--primary);
+    font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:20px;margin-bottom:3px;margin-right:4px;
+  }
+  .client-info .day-badge{
+    display:inline-block;background:#fef3c7;color:#92400e;
+    font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:20px;margin-bottom:3px;
+  }
+  .client-actions{display:flex;flex-direction:column;gap:6px;}
+  .client-actions .btn{white-space:nowrap;}
+
+  .empty-state{text-align:center;color:var(--muted);padding:40px 10px;}
+
+  /* Modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(17,24,39,.5);
+    display:flex;align-items:flex-end;justify-content:center;
+    z-index:2000;
+  }
+  .modal-overlay.center{align-items:center;}
+  .modal{
+    background:#fff;width:100%;max-width:520px;
+    border-radius:18px 18px 0 0;
+    padding:20px;
+    max-height:90vh;overflow-y:auto;
+    animation:slideUp .18s ease-out;
+  }
+  .modal-overlay.center .modal{border-radius:18px;}
+  @keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .modal h2{margin:0 0 4px 0;font-size:1.15rem;}
+  .modal-sub{color:var(--muted);font-size:.85rem;margin-bottom:6px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions .btn{flex:1;}
+
+  .summary-box{
+    background:#eff4ff;border:1px solid #c7d9fb;border-radius:12px;padding:12px 14px;margin-bottom:14px;
+  }
+  .summary-box .line{display:flex;justify-content:space-between;font-size:.9rem;padding:2px 0;}
+  .summary-box .line b{font-weight:700;}
+  .summary-box .tag{
+    display:inline-block;background:var(--primary);color:#fff;font-size:.75rem;
+    padding:2px 8px;border-radius:20px;margin-top:4px;
+  }
+
+  .product-item{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .product-info{flex:1;min-width:0;}
+  .product-info .pcode{
+    display:inline-block;background:#eef2ff;color:#4338ca;font-size:.72rem;font-weight:700;
+    padding:1px 7px;border-radius:20px;margin-bottom:3px;margin-right:4px;
+  }
+  .product-info .pcat{
+    display:inline-block;background:#ecfdf5;color:#047857;font-size:.72rem;font-weight:700;
+    padding:1px 7px;border-radius:20px;margin-bottom:3px;
+  }
+  .product-info .pname{font-weight:600;}
+  .product-info .pprice{color:var(--muted);font-size:.9rem;}
+  .product-actions{display:flex;align-items:center;gap:6px;}
+
+  table{width:100%;border-collapse:collapse;font-size:.88rem;}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;}
+  td.num{text-align:right;white-space:nowrap;}
+  .qty-control{display:flex;align-items:center;gap:6px;justify-content:center;}
+  .qty-control button{
+    width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+    background:#f9fafb;font-weight:700;cursor:pointer;font-size:1rem;
+  }
+  .qty-control span{min-width:20px;text-align:center;font-weight:600;}
+
+  .total-bar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:#111827;color:#fff;border-radius:14px;padding:16px 18px;margin:16px 0;
+  }
+  .total-bar .label{font-size:.9rem;opacity:.8;}
+  .total-bar .amount{font-size:1.6rem;font-weight:800;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#111827;color:#fff;padding:12px 20px;border-radius:12px;
+    font-size:.92rem;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.25);
+    opacity:0;transition:opacity .25s, bottom .25s;pointer-events:none;
+    max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;bottom:36px;}
+
+  .filters-row{display:flex;gap:10px;margin-bottom:14px;}
+  .order-card{margin-bottom:12px;}
+  .order-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .order-head .num{font-weight:800;color:var(--primary);}
+  .order-head .date{color:var(--muted);font-size:.82rem;}
+  .order-detail{margin-top:8px;font-size:.85rem;color:var(--text);}
+  .order-detail ul{margin:6px 0;padding-left:18px;}
+  .order-total{font-weight:800;font-size:1.05rem;margin-top:8px;}
+  .order-footer{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .order-footer .btn{flex:1;min-width:120px;}
+
+  .stats-bar{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;}
+  .stats-bar .stat{flex:1;min-width:120px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+  .stats-bar .stat .val{font-size:1.25rem;font-weight:800;color:var(--primary);}
+  .stats-bar .stat .lbl{font-size:.75rem;color:var(--muted);}
+
+  .nosale-item{background:#fff7ed;border:1px solid #fed7aa;}
+
+  .chart-wrap{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;}
+  .chart-wrap h4{margin:0 0 10px 0;font-size:.9rem;color:var(--text);}
+  .ranking-title{font-size:.95rem;font-weight:700;margin:18px 0 8px 0;}
+
+  .required-mark{color:var(--danger);}
+  .error-text{color:var(--danger);font-size:.8rem;margin-top:4px;display:none;}
+  .error-text.show{display:block;}
+
+  .fab-space{height:10px;}
+
+  @media print{
+    header.appbar, .no-print, .modal-overlay{display:none !important;}
+    body{background:#fff;padding:0;}
+    .container{max-width:100%;padding:0;}
+    .card{box-shadow:none;border:1px solid #ccc;}
+    .print-only{display:block !important;}
+  }
+  .print-only{display:none;}
+  .print-title{text-align:center;margin-bottom:12px;}
+
+  /* Áreas de impresión especiales: Remito y Hoja de Carga */
+  .remito-print-only, .hoja-print-only{display:none;}
+  body.mode-remito header, body.mode-remito #mainContainer, body.mode-remito .toast{display:none !important;}
+  body.mode-remito .remito-print-only{display:block !important;padding:24px;}
+  body.mode-hoja header, body.mode-hoja #mainContainer, body.mode-hoja .toast{display:none !important;}
+  body.mode-hoja .hoja-print-only{display:block !important;padding:24px;}
+
+  .remito-sheet{max-width:800px;margin:0 auto;}
+  .remito-header{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:24px;
+    padding-bottom:16px;margin-bottom:16px;border-bottom:3px solid #0f3d91;
+  }
+  .remito-box{font-size:.9rem;line-height:1.5;}
+  .remito-box .box-label{
+    font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    font-weight:700;margin-bottom:4px;
+  }
+  .remito-box .big{font-weight:800;font-size:1.1rem;margin-bottom:2px;color:#111827;}
+
+  .remito-brand-box{text-align:right;}
+  .remito-brand-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;}
+  .remito-brand-text .brand-name{font-size:1.2rem;font-weight:800;color:#0f3d91;line-height:1.2;}
+  .remito-brand-text .brand-meta{font-size:.8rem;color:var(--muted);margin-top:2px;}
+  .remito-logo{
+    width:58px;height:58px;border-radius:50%;object-fit:cover;flex-shrink:0;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+  }
+  .remito-logo-fallback{
+    width:58px;height:58px;border-radius:50%;background:#0f3d91;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;flex-shrink:0;
+  }
+  .remito-tagline{font-size:.75rem;font-style:italic;color:var(--muted);margin-top:6px;}
+
+  .remito-meta-line{font-size:.9rem;color:#111827;font-weight:700;margin-bottom:16px;}
+  .remito-meta-line .date{font-weight:500;color:var(--muted);margin-left:8px;}
+
+  .remito-table{width:100%;border-collapse:collapse;margin-top:4px;}
+  .remito-table th, .remito-table td{border:1px solid #d8dce3;padding:8px 10px;font-size:.85rem;}
+  .remito-table th{background:#0f3d91;color:#fff;text-transform:uppercase;font-size:.7rem;letter-spacing:.4px;}
+  .remito-table tbody tr:nth-child(even){background:#f6f8fb;}
+  .remito-table td.num{text-align:right;}
+  .remito-totals{margin-top:16px;margin-left:auto;width:280px;}
+  .remito-totals .line{display:flex;justify-content:space-between;padding:6px 2px;font-size:.95rem;}
+  .remito-totals .line.total{
+    font-weight:800;font-size:1.15rem;background:#0f3d91;color:#fff;
+    border-radius:8px;padding:10px 12px;margin-top:6px;
+  }
+  .remito-footer-note{text-align:center;color:var(--muted);font-size:.78rem;margin-top:26px;}
+
+  .hoja-print-only h2{text-align:center;margin-bottom:4px;}
+  .hoja-print-only .hoja-sub{text-align:center;color:#555;font-size:.85rem;margin-bottom:16px;}
+
+  @media print{
+    .remito-table th, .remito-totals .line.total{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <button class="back-btn no-print" id="backBtn" style="visibility:hidden;">← Volver</button>
+  <h1 id="pageTitle">Sistema Facturador</h1>
+  <div style="width:70px;"></div>
+</header>
+
+<div class="container" id="mainContainer"></div>
+
+<div id="remitoPrintArea" class="remito-print-only"></div>
+<div id="hojaPrintArea" class="hoja-print-only"></div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN DE LA EMPRESA (para remitos)
+   ============================================================ */
+const EMPRESA = {
+  name: 'El Rincón Distribuidora',
+  address: 'Cdad de Viedma 2151',
+  phone: '3804988953',
+  logoDataUrl: 'data:image/jpeg;base64,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'
+};
+
+const DISTRIBUIDORAS = ['El Rincón'];
+const DIAS_VISITA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MOTIVOS_SUGERIDOS = ['No tenía stock', 'No tenía plata', 'Local cerrado', 'No lo atendieron', 'No necesita por ahora'];
+
+/* ============================================================
+   ESTADO / STORAGE
+   ============================================================ */
+const LS_KEYS = {
+  clients: 'fact_clients',
+  products: 'fact_products',
+  orders: 'fact_orders',
+  nosales: 'fact_nosales',
+  counter: 'fact_order_counter'
+};
+
+let state = {
+  view: 'home', // home | clients | products | indicators | orders | orderScreen
+  clientsSubView: 'list', // list | map
+  indicatorsSubView: 'daily', // daily | monthly
+  currentClientId: null,
+  currentDistrib: null,
+  editingOrderId: null,
+  cart: [], // {productId, code, category, name, price, qty}
+  clientSearch: '',
+  clientFilterDay: '',
+  productSearch: '',
+  productsManageSearch: '',
+  productFilterCategory: '',
+  productFilterPriceMin: '',
+  productFilterPriceMax: '',
+  ordersFilterDate: '',
+  indicatorsDate: '',
+  indicatorsMonth: ''
+};
+
+function loadClients(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEYS.clients)) || []; }catch(e){ return []; }
+}
+function saveClients(list){ localStorage.setItem(LS_KEYS.clients, JSON.stringify(list)); }
+
+function loadProducts(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEYS.products)) || []; }catch(e){ return []; }
+}
+function saveProducts(list){ localStorage.setItem(LS_KEYS.products, JSON.stringify(list)); }
+
+function loadOrders(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEYS.orders)) || []; }catch(e){ return []; }
+}
+function saveOrders(list){ localStorage.setItem(LS_KEYS.orders, JSON.stringify(list)); }
+
+function loadNoSales(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEYS.nosales)) || []; }catch(e){ return []; }
+}
+function saveNoSales(list){ localStorage.setItem(LS_KEYS.nosales, JSON.stringify(list)); }
+
+function nextOrderNumber(){
+  let n = parseInt(localStorage.getItem(LS_KEYS.counter) || '0', 10);
+  n += 1;
+  localStorage.setItem(LS_KEYS.counter, String(n));
+  return n;
+}
+
+function uid(){
+  return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+
+/* ============================================================
+   NORMALIZACIÓN DE DATOS
+   Los códigos de clientes y productos los carga la persona
+   manualmente; no se autogeneran.
+   ============================================================ */
+function migrateNormalizeData(){
+  let products = loadProducts();
+  const beforeP = JSON.stringify(products);
+  products.forEach(p=>{
+    p.distrib = DISTRIBUIDORAS[0];
+    if(!p.category) p.category = 'General';
+  });
+  if(JSON.stringify(products) !== beforeP) saveProducts(products);
+}
+
+/* ============================================================
+   DATOS DE EJEMPLO (solo si localStorage vacío)
+   ============================================================ */
+function seedDataIfEmpty(){
+  let clients = loadClients();
+  if(clients.length === 0){
+    clients = [
+      { id: uid(), code:'001', name: 'Comercial Los Ceibos', address: 'Av. San Martín 123', phone: '3804123456', lat:null, lng:null, visitDay:'Lunes' },
+      { id: uid(), code:'002', name: 'Almacén Don Pedro', address: 'Calle Belgrano 456', phone: '3804987654', lat:null, lng:null, visitDay:'Miércoles' }
+    ];
+    saveClients(clients);
+  }
+  let products = loadProducts();
+  if(products.length === 0){
+    products = [
+      { id: uid(), code:'0001', name: 'Harina 0000 1kg', price: 850, category:'Almacén', distrib: 'El Rincón' },
+      { id: uid(), code:'0002', name: 'Aceite Girasol 1.5L', price: 2100, category:'Almacén', distrib: 'El Rincón' },
+      { id: uid(), code:'0003', name: 'Gaseosa Cola 2.25L', price: 1800, category:'Bebidas', distrib: 'El Rincón' },
+      { id: uid(), code:'0004', name: 'Agua Mineral 500ml', price: 600, category:'Bebidas', distrib: 'El Rincón' }
+    ];
+    saveProducts(products);
+  }
+}
+
+/* ============================================================
+   IMPORTACIÓN / EXPORTACIÓN EXCEL (clientes y productos)
+   ============================================================ */
+function normalizeHeaderKey(k){
+  return String(k).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+
+function getRowValue(rowMap, candidates){
+  for(const c of candidates){
+    if(rowMap[c] !== undefined && String(rowMap[c]).trim() !== '') return String(rowMap[c]).trim();
+  }
+  return '';
+}
+
+function normalizeVisitDay(val){
+  if(!val) return '';
+  const clean = String(val).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const found = DIAS_VISITA.find(d => d.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'') === clean);
+  return found || '';
+}
+
+function parseWorkbookFile(file, callback){
+  if(typeof XLSX === 'undefined'){
+    callback(new Error('No se pudo cargar el lector de Excel (sin conexión a internet).'));
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type:'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+      callback(null, rows);
+    }catch(err){
+      callback(err);
+    }
+  };
+  reader.onerror = ()=> callback(new Error('No se pudo leer el archivo.'));
+  reader.readAsArrayBuffer(file);
+}
+
+function parsePriceValue(val){
+  if(val === '' || val === null || val === undefined) return NaN;
+  const cleaned = String(val).replace(/\./g,'').replace(',', '.').replace(/[^0-9.\-]/g,'');
+  return parseFloat(cleaned);
+}
+
+function importProductsFromRows(rows){
+  let products = loadProducts();
+  let added = 0, updated = 0, skipped = 0;
+
+  rows.forEach(row=>{
+    const rowMap = {};
+    Object.keys(row).forEach(k=>{ rowMap[normalizeHeaderKey(k)] = row[k]; });
+
+    const code = getRowValue(rowMap, ['codigo','code','cod']);
+    const name = getRowValue(rowMap, ['nombre','producto','descripcion','name']);
+    const priceRaw = getRowValue(rowMap, ['precio','price']);
+    const price = parsePriceValue(priceRaw);
+    const category = getRowValue(rowMap, ['categoria','rubro','category']) || 'General';
+
+    if(!code || !name || isNaN(price) || price <= 0){
+      skipped++;
+      return;
+    }
+
+    const idx = products.findIndex(p => (p.code||'').toLowerCase() === code.toLowerCase());
+    if(idx > -1){
+      products[idx] = { ...products[idx], code, name, price, category, distrib: DISTRIBUIDORAS[0] };
+      updated++;
+    } else {
+      products.push({ id: uid(), code, name, price, category, distrib: DISTRIBUIDORAS[0] });
+      added++;
+    }
+  });
+
+  saveProducts(products);
+  return { added, updated, skipped };
+}
+
+function importClientsFromRows(rows){
+  let clients = loadClients();
+  let added = 0, updated = 0, skipped = 0;
+
+  rows.forEach(row=>{
+    const rowMap = {};
+    Object.keys(row).forEach(k=>{ rowMap[normalizeHeaderKey(k)] = row[k]; });
+
+    const code = getRowValue(rowMap, ['codigo','code','cod']);
+    const name = getRowValue(rowMap, ['nombre','razon social','razonsocial','cliente','name']);
+    const address = getRowValue(rowMap, ['direccion','domicilio','address']);
+    const phone = getRowValue(rowMap, ['telefono','tel','celular','phone']);
+    const visitDay = normalizeVisitDay(getRowValue(rowMap, ['dia de visita','diadevisita','dia','visita']));
+    const latRaw = getRowValue(rowMap, ['latitud','lat']);
+    const lngRaw = getRowValue(rowMap, ['longitud','lng','long']);
+    const lat = latRaw ? parseFloat(latRaw.replace(',','.')) : null;
+    const lng = lngRaw ? parseFloat(lngRaw.replace(',','.')) : null;
+
+    if(!code || !name){
+      skipped++;
+      return;
+    }
+
+    const idx = clients.findIndex(c => (c.code||'').toLowerCase() === code.toLowerCase());
+    if(idx > -1){
+      clients[idx] = {
+        ...clients[idx], code, name,
+        address: address || clients[idx].address,
+        phone: phone || clients[idx].phone,
+        visitDay: visitDay || clients[idx].visitDay,
+        lat: (lat!=null && !isNaN(lat)) ? lat : clients[idx].lat,
+        lng: (lng!=null && !isNaN(lng)) ? lng : clients[idx].lng
+      };
+      updated++;
+    } else {
+      clients.push({
+        id: uid(), code, name, address, phone, visitDay,
+        lat: (lat!=null && !isNaN(lat)) ? lat : null,
+        lng: (lng!=null && !isNaN(lng)) ? lng : null
+      });
+      added++;
+    }
+  });
+
+  saveClients(clients);
+  return { added, updated, skipped };
+}
+
+function handleImportFile(file, kind, onDone){
+  parseWorkbookFile(file, (err, rows)=>{
+    if(err){
+      showToast('Error al leer el archivo: ' + err.message);
+      return;
+    }
+    if(!rows || rows.length === 0){
+      showToast('El archivo no tiene filas para importar.');
+      return;
+    }
+    const stats = kind === 'products' ? importProductsFromRows(rows) : importClientsFromRows(rows);
+    let msg = `Importación: ${stats.added} nuevos, ${stats.updated} actualizados`;
+    if(stats.skipped > 0) msg += `, ${stats.skipped} omitidos`;
+    msg += '.';
+    showToast(msg);
+    if(onDone) onDone();
+  });
+}
+
+function exportProductsToExcel(){
+  if(typeof XLSX === 'undefined'){
+    showToast('No se pudo cargar el exportador (sin conexión a internet).');
+    return;
+  }
+  const products = loadProducts();
+  if(products.length === 0){
+    showToast('No hay productos para exportar.');
+    return;
+  }
+  const rows = products.map(p=>({ Codigo:p.code||'', Producto:p.name||'', Precio:p.price||0, Categoria:p.category||'' }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+  XLSX.writeFile(wb, 'productos_el_rincon.xlsx');
+}
+
+function exportClientsToExcel(){
+  if(typeof XLSX === 'undefined'){
+    showToast('No se pudo cargar el exportador (sin conexión a internet).');
+    return;
+  }
+  const clients = loadClients();
+  if(clients.length === 0){
+    showToast('No hay clientes para exportar.');
+    return;
+  }
+  const rows = clients.map(c=>{
+    const hasCoords = c.lat!=null && c.lng!=null && !isNaN(c.lat) && !isNaN(c.lng);
+    return {
+      Codigo:c.code||'', 'Razon Social':c.name||'', Telefono:c.phone||'',
+      'Dia de Visita':c.visitDay||'', Direccion:c.address||'',
+      Latitud: c.lat!=null ? c.lat : '', Longitud: c.lng!=null ? c.lng : '',
+      'Como llegar': hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}&travelmode=driving` : ''
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+  XLSX.writeFile(wb, 'clientes_el_rincon.xlsx');
+}
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
+function formatMoney(n){
+  n = Number(n) || 0;
+  return '$' + n.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+
+function formatDateAR(dateStr){
+  const [y,m,d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function todayISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function currentMonthISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function nowTimeStr(){
+  const d = new Date();
+  return d.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function waLink(phone){
+  const digits = String(phone||'').replace(/[^0-9]/g,'');
+  return `https://wa.me/${digits}`;
+}
+
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.classList.remove('show'); }, 2600);
+}
+
+/* ============================================================
+   RENDER PRINCIPAL / ROUTER
+   ============================================================ */
+const mainContainer = document.getElementById('mainContainer');
+const pageTitle = document.getElementById('pageTitle');
+const backBtn = document.getElementById('backBtn');
+
+function setHeader(title, showBack, onBack){
+  pageTitle.textContent = title;
+  if(showBack){
+    backBtn.style.visibility = 'visible';
+    backBtn.onclick = onBack;
+  } else {
+    backBtn.style.visibility = 'hidden';
+    backBtn.onclick = null;
+  }
+}
+
+function render(){
+  mainContainer.innerHTML = '';
+  if(state.view === 'home'){
+    renderHome();
+  } else if(state.view === 'clients'){
+    renderClientsSection();
+  } else if(state.view === 'products'){
+    renderProductsSection();
+  } else if(state.view === 'indicators'){
+    renderIndicatorsSection();
+  } else if(state.view === 'orders'){
+    renderOrdersSection();
+  } else if(state.view === 'orderScreen'){
+    renderOrderScreen();
+  }
+}
+
+/* ============================================================
+   PANTALLA 1: INICIO — DASHBOARD 2x2
+   ============================================================ */
+function renderHome(){
+  setHeader('Sistema Facturador', false, null);
+  mainContainer.innerHTML = `
+    <div class="dashboard-grid">
+      <div class="dashboard-card" id="cardClients">
+        <div class="icon">👥</div>
+        <div class="title">Clientes</div>
+      </div>
+      <div class="dashboard-card" id="cardProducts">
+        <div class="icon">📦</div>
+        <div class="title">Productos</div>
+      </div>
+      <div class="dashboard-card" id="cardIndicators">
+        <div class="icon">📊</div>
+        <div class="title">Indicadores de Venta</div>
+      </div>
+      <div class="dashboard-card" id="cardOrders">
+        <div class="icon">📋</div>
+        <div class="title">Pedidos del Día</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('cardClients').addEventListener('click', ()=>{ state.view='clients'; render(); });
+  document.getElementById('cardProducts').addEventListener('click', ()=>{ state.view='products'; render(); });
+  document.getElementById('cardIndicators').addEventListener('click', ()=>{ state.view='indicators'; render(); });
+  document.getElementById('cardOrders').addEventListener('click', ()=>{ state.view='orders'; render(); });
+}
+
+/* ============================================================
+   SECCIÓN 1: CLIENTES (Listado / Mapa)
+   ============================================================ */
+function renderClientsSection(){
+  setHeader('👥 Clientes', true, ()=>{ state.view='home'; render(); });
+
+  mainContainer.innerHTML = `
+    <div class="view-toggle">
+      <button id="btnSubList" class="${state.clientsSubView==='list'?'active':''}">📋 Listado</button>
+      <button id="btnSubMap" class="${state.clientsSubView==='map'?'active':''}">🗺️ Geolocalización</button>
+    </div>
+    <div id="clientsSubArea"></div>
+  `;
+
+  document.getElementById('btnSubList').addEventListener('click', ()=>{ state.clientsSubView='list'; render(); });
+  document.getElementById('btnSubMap').addEventListener('click', ()=>{ state.clientsSubView='map'; render(); });
+
+  if(state.clientsSubView === 'map'){
+    renderClientsMapSubview();
+  } else {
+    renderClientsListSubview();
+  }
+}
+
+function getFilteredClients(){
+  const s = state.clientSearch.trim().toLowerCase();
+  return loadClients().filter(c=>{
+    const matchName = c.name.toLowerCase().includes(s);
+    const matchDay = !state.clientFilterDay || c.visitDay === state.clientFilterDay;
+    return matchName && matchDay;
+  });
+}
+
+function renderClientsListSubview(){
+  const area = document.getElementById('clientsSubArea');
+  area.innerHTML = `
+    <div class="search-wrap">
+      <input type="text" id="clientSearchInput" placeholder="🔎 Buscar cliente..." value="${escapeHtml(state.clientSearch)}">
+    </div>
+    <div class="field-group" style="margin-bottom:14px;">
+      <label style="margin-top:0;">Filtrar por día de visita</label>
+      <select id="clientDayFilter">
+        <option value="">Todos los días</option>
+        ${DIAS_VISITA.map(d=>`<option value="${d}" ${state.clientFilterDay===d?'selected':''}>${d}</option>`).join('')}
+      </select>
+    </div>
+    <div id="clientListWrap"></div>
+  `;
+
+  document.getElementById('clientSearchInput').addEventListener('input',(e)=>{
+    state.clientSearch = e.target.value;
+    refreshClientList();
+  });
+  document.getElementById('clientDayFilter').addEventListener('change',(e)=>{
+    state.clientFilterDay = e.target.value;
+    refreshClientList();
+  });
+
+  refreshClientList();
+
+  function refreshClientList(){
+    const wrap = document.getElementById('clientListWrap');
+    const list = getFilteredClients();
+    if(list.length === 0){
+      wrap.innerHTML = `<div class="empty-state">No hay clientes para mostrar.</div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(c=>`
+      <div class="card client-item" data-tap-client="${c.id}">
+        <div class="client-info">
+          <span class="code-badge">N° ${escapeHtml(c.code || '-')}</span>
+          ${c.visitDay ? `<span class="day-badge">${escapeHtml(c.visitDay)}</span>` : ''}
+          <div class="name">${escapeHtml(c.name)}${(c.lat!=null && c.lng!=null) ? ' 📍' : ''}</div>
+          <div class="meta">${escapeHtml(c.phone || '(sin teléfono)')}</div>
+        </div>
+        <div class="client-actions">
+          <button class="btn btn-secondary btn-sm" data-edit="${c.id}">✏️</button>
+          ${c.phone ? `<button class="btn btn-whatsapp btn-sm" data-wa="${c.id}">🟢 WhatsApp</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    wrap.querySelectorAll('[data-tap-client]').forEach(card=>{
+      card.addEventListener('click', ()=> startNewOrder(card.dataset.tapClient, DISTRIBUIDORAS[0]));
+    });
+    wrap.querySelectorAll('[data-edit]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const client = loadClients().find(c=>c.id === btn.dataset.edit);
+        openClientModal(client);
+      });
+    });
+    wrap.querySelectorAll('[data-wa]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const client = loadClients().find(c=>c.id === btn.dataset.wa);
+        if(client) window.open(waLink(client.phone), '_blank');
+      });
+    });
+  }
+}
+
+/* ============================================================
+   SUBVISTA: GEOLOCALIZACIÓN (mapa + cargar/importar/exportar)
+   ============================================================ */
+let clientMapInstance = null;
+let userLocation = null; // {lat, lng} — no se persiste, solo dura la sesión
+
+function haversineKm(lat1, lng1, lat2, lng2){
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function renderClientsMapSubview(){
+  const area = document.getElementById('clientsSubArea');
+  area.innerHTML = `
+    <div class="row">
+      <button class="btn btn-primary btn-block" id="btnAddClientMap">➕ Cargar Cliente</button>
+      <button class="btn btn-secondary btn-block" id="btnImportClients">📥 Importar</button>
+      <button class="btn btn-secondary btn-block" id="btnExportClients">📤 Exportar</button>
+    </div>
+    <div class="fab-space"></div>
+    <div class="row no-print">
+      <button class="btn btn-secondary btn-block" id="btnMyLocation">📍 ${userLocation ? 'Actualizar mi ubicación' : 'Mostrar mi ubicación'}</button>
+    </div>
+    <div class="fab-space"></div>
+    <input type="file" id="importClientsInput" accept=".xlsx,.xls,.csv" style="display:none;">
+    <div id="clientMapEl" style="height:420px;border-radius:14px;overflow:hidden;border:1px solid var(--border);"></div>
+    <div id="clientMapNote"></div>
+  `;
+
+  document.getElementById('btnAddClientMap').addEventListener('click', ()=> openClientModal(null));
+  document.getElementById('btnImportClients').addEventListener('click', ()=>{
+    document.getElementById('importClientsInput').click();
+  });
+  document.getElementById('importClientsInput').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    handleImportFile(file, 'clients', ()=> render());
+    e.target.value = '';
+  });
+  document.getElementById('btnExportClients').addEventListener('click', exportClientsToExcel);
+
+  document.getElementById('btnMyLocation').addEventListener('click', ()=>{
+    if(!navigator.geolocation){
+      showToast('Este dispositivo no soporta geolocalización.');
+      return;
+    }
+    showToast('Obteniendo tu ubicación...');
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        showToast('Ubicación actualizada.');
+        renderClientsMapSubview();
+      },
+      err=>{ showToast('No se pudo obtener tu ubicación.'); },
+      { enableHighAccuracy:true, timeout:10000 }
+    );
+  });
+
+  drawClientMap();
+}
+
+function drawClientMap(){
+  const list = getFilteredClients();
+  const withCoords = list.filter(c => typeof c.lat === 'number' && typeof c.lng === 'number' && !isNaN(c.lat) && !isNaN(c.lng));
+  const withoutCoords = list.length - withCoords.length;
+
+  const note = document.getElementById('clientMapNote');
+  if(note){
+    note.innerHTML = `
+      ${withoutCoords > 0 ? `<div class="map-empty-note">${withoutCoords} cliente(s) sin ubicación guardada (no se muestran en el mapa).</div>` : ''}
+      ${list.length === 0 ? `<div class="empty-state">No hay clientes para mostrar.</div>` : ''}
+    `;
+  }
+
+  if(typeof L === 'undefined'){
+    document.getElementById('clientMapEl').innerHTML = '<div class="empty-state">No se pudo cargar el mapa (sin conexión a internet).</div>';
+    return;
+  }
+
+  if(clientMapInstance){
+    clientMapInstance.remove();
+    clientMapInstance = null;
+  }
+
+  const defaultCenter = userLocation ? [userLocation.lat, userLocation.lng] : [-29.4131, -66.8558];
+  const map = L.map('clientMapEl').setView(defaultCenter, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+  clientMapInstance = map;
+
+  const bounds = [];
+
+  if(userLocation){
+    const meIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:18px;height:18px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 0 0 2px #16a34a;"></div>',
+      iconSize: [18,18],
+      iconAnchor: [9,9]
+    });
+    L.marker([userLocation.lat, userLocation.lng], { icon: meIcon, zIndexOffset: 1000 })
+      .addTo(map)
+      .bindPopup('📍 Tu ubicación actual');
+    bounds.push([userLocation.lat, userLocation.lng]);
+  }
+
+  withCoords.forEach(c=>{
+    const marker = L.marker([c.lat, c.lng]).addTo(map);
+    let distanceLine = '';
+    if(userLocation){
+      const km = haversineKm(userLocation.lat, userLocation.lng, c.lat, c.lng);
+      distanceLine = `<div style="font-size:.78rem;color:#2563eb;margin-bottom:8px;">📏 ~${km.toFixed(1)} km en línea recta</div>`;
+    }
+    const popupHtml = `
+      <div style="min-width:180px;">
+        <div style="font-weight:700;margin-bottom:2px;">${escapeHtml(c.name)}</div>
+        <div style="font-size:.8rem;color:#555;margin-bottom:4px;">${escapeHtml(c.address || '')}</div>
+        ${distanceLine}
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button onclick="window.mapEditClient('${c.id}')" style="flex:1;padding:6px 8px;border:none;border-radius:8px;background:#e5e7eb;cursor:pointer;font-size:.78rem;">Modificar</button>
+          <button onclick="window.mapOrderClient('${c.id}')" style="flex:1;padding:6px 8px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:.78rem;">Pedido</button>
+        </div>
+        <button onclick="window.mapDirections(${c.lat},${c.lng})" style="width:100%;padding:7px 8px;border:none;border-radius:8px;background:#16a34a;color:#fff;cursor:pointer;font-size:.78rem;font-weight:700;">🧭 Cómo llegar</button>
+      </div>
+    `;
+    marker.bindPopup(popupHtml);
+    bounds.push([c.lat, c.lng]);
+  });
+
+  if(bounds.length > 0){
+    map.fitBounds(bounds, { padding:[30,30], maxZoom:15 });
+  }
+}
+
+window.mapEditClient = function(id){
+  const client = loadClients().find(c=>c.id===id);
+  if(client) openClientModal(client);
+};
+window.mapOrderClient = function(id){
+  startNewOrder(id, DISTRIBUIDORAS[0]);
+};
+window.mapDirections = function(lat, lng){
+  const url = userLocation
+    ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${lat},${lng}&travelmode=driving`
+    : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  window.open(url, '_blank');
+};
+
+/* ============================================================
+   MODAL: CARGAR / MODIFICAR CLIENTE
+   ============================================================ */
+function openClientModal(existingClient){
+  const isEdit = !!existingClient;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const lat = isEdit && existingClient.lat!=null ? existingClient.lat : '';
+  const lng = isEdit && existingClient.lng!=null ? existingClient.lng : '';
+  const dayOptionsHtml = DIAS_VISITA.map(d=>{
+    const selected = isEdit && existingClient.visitDay === d ? 'selected' : '';
+    return `<option value="${d}" ${selected}>${d}</option>`;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${isEdit ? 'Modificar Cliente' : 'Cargar Cliente'}</h2>
+      <div class="field-group">
+        <label>Código <span class="required-mark">*</span></label>
+        <input type="text" id="clientCodeInput" value="${isEdit ? escapeHtml(existingClient.code || '') : ''}" placeholder="Ej: 001">
+        <div class="error-text" id="clientCodeError">El código es obligatorio.</div>
+      </div>
+      <div class="field-group">
+        <label>Razón social <span class="required-mark">*</span></label>
+        <input type="text" id="clientNameInput" value="${isEdit ? escapeHtml(existingClient.name) : ''}" placeholder="Ej: Comercial Los Ceibos">
+        <div class="error-text" id="clientNameError">El nombre es obligatorio.</div>
+      </div>
+      <div class="field-group">
+        <label>Teléfono</label>
+        <input type="tel" id="clientPhoneInput" value="${isEdit ? escapeHtml(existingClient.phone) : ''}" placeholder="Ej: 3804123456">
+      </div>
+      <div class="field-group">
+        <label>Día de visita</label>
+        <select id="clientDayInput">
+          <option value="">Sin día asignado</option>
+          ${dayOptionsHtml}
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Dirección (opcional)</label>
+        <input type="text" id="clientAddressInput" value="${isEdit ? escapeHtml(existingClient.address||'') : ''}" placeholder="Ej: Av. San Martín 123">
+      </div>
+      <div class="field-group">
+        <label>Geolocalización (opcional)</label>
+        <div class="row">
+          <input type="number" step="any" id="clientLatInput" value="${lat}" placeholder="Latitud">
+          <input type="number" step="any" id="clientLngInput" value="${lng}" placeholder="Longitud">
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="clientGeoBtn" style="margin-top:8px;">📍 Usar mi ubicación actual</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="clientCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="clientSaveBtn">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) document.body.removeChild(overlay); });
+  document.getElementById('clientCancelBtn').addEventListener('click', ()=> document.body.removeChild(overlay));
+
+  document.getElementById('clientGeoBtn').addEventListener('click', ()=>{
+    if(!navigator.geolocation){
+      showToast('Este dispositivo no soporta geolocalización.');
+      return;
+    }
+    showToast('Obteniendo ubicación...');
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        document.getElementById('clientLatInput').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('clientLngInput').value = pos.coords.longitude.toFixed(6);
+        showToast('Ubicación capturada.');
+      },
+      err=>{ showToast('No se pudo obtener la ubicación.'); },
+      { enableHighAccuracy:true, timeout:10000 }
+    );
+  });
+
+  document.getElementById('clientSaveBtn').addEventListener('click', ()=>{
+    const codeInput = document.getElementById('clientCodeInput');
+    const nameInput = document.getElementById('clientNameInput');
+    const code = codeInput.value.trim();
+    const name = nameInput.value.trim();
+    const phone = document.getElementById('clientPhoneInput').value.trim();
+    const visitDay = document.getElementById('clientDayInput').value;
+    const address = document.getElementById('clientAddressInput').value.trim();
+    const latVal = document.getElementById('clientLatInput').value.trim();
+    const lngVal = document.getElementById('clientLngInput').value.trim();
+    const newLat = latVal ? parseFloat(latVal) : null;
+    const newLng = lngVal ? parseFloat(lngVal) : null;
+
+    let valid = true;
+    document.getElementById('clientCodeError').classList.remove('show');
+    document.getElementById('clientNameError').classList.remove('show');
+    if(!code){ document.getElementById('clientCodeError').classList.add('show'); valid = false; }
+    if(!name){ document.getElementById('clientNameError').classList.add('show'); valid = false; }
+    if(!valid) return;
+
+    let clients = loadClients();
+    if(isEdit){
+      const idx = clients.findIndex(c=>c.id === existingClient.id);
+      if(idx > -1){
+        clients[idx] = { ...clients[idx], code, name, phone, visitDay, address, lat:newLat, lng:newLng };
+      }
+    } else {
+      clients.push({ id: uid(), code, name, phone, visitDay, address, lat:newLat, lng:newLng });
+    }
+    saveClients(clients);
+    document.body.removeChild(overlay);
+    showToast(isEdit ? 'Cliente actualizado.' : 'Cliente guardado.');
+    render();
+  });
+}
+
+/* ============================================================
+   SECCIÓN 2: PRODUCTOS
+   ============================================================ */
+function getProductCategories(){
+  const cats = new Set(loadProducts().map(p=>p.category).filter(Boolean));
+  return Array.from(cats).sort();
+}
+
+function renderProductsSection(){
+  setHeader('📦 Productos', true, ()=>{ state.view='home'; render(); });
+
+  const categories = getProductCategories();
+
+  mainContainer.innerHTML = `
+    <div class="row">
+      <button class="btn btn-primary btn-block" id="btnAddProductGlobal">➕ Cargar Producto</button>
+      <button class="btn btn-secondary btn-block" id="btnImportProducts">📥 Importar</button>
+      <button class="btn btn-secondary btn-block" id="btnExportProducts">📤 Exportar</button>
+    </div>
+    <div class="fab-space"></div>
+    <div class="search-wrap">
+      <input type="text" id="productsManageSearchInput" placeholder="🔎 Buscar por nombre o código..." value="${escapeHtml(state.productsManageSearch)}">
+    </div>
+    <div class="row" style="margin-bottom:14px;">
+      <div>
+        <label style="margin-top:0;">Categoría</label>
+        <select id="productCategoryFilter">
+          <option value="">Todas</option>
+          ${categories.map(c=>`<option value="${escapeHtml(c)}" ${state.productFilterCategory===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="margin-top:0;">Precio mín.</label>
+        <input type="number" id="productPriceMinFilter" value="${escapeHtml(state.productFilterPriceMin)}" placeholder="0">
+      </div>
+      <div>
+        <label style="margin-top:0;">Precio máx.</label>
+        <input type="number" id="productPriceMaxFilter" value="${escapeHtml(state.productFilterPriceMax)}" placeholder="Sin límite">
+      </div>
+    </div>
+    <input type="file" id="importProductsInput" accept=".xlsx,.xls,.csv" style="display:none;">
+    <div id="productsManageList"></div>
+  `;
+
+  document.getElementById('btnAddProductGlobal').addEventListener('click', ()=> openProductModal(null));
+  document.getElementById('btnImportProducts').addEventListener('click', ()=>{
+    document.getElementById('importProductsInput').click();
+  });
+  document.getElementById('importProductsInput').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    handleImportFile(file, 'products', ()=> render());
+    e.target.value = '';
+  });
+  document.getElementById('btnExportProducts').addEventListener('click', exportProductsToExcel);
+
+  document.getElementById('productsManageSearchInput').addEventListener('input', (e)=>{
+    state.productsManageSearch = e.target.value;
+    refreshProductsManageList();
+  });
+  document.getElementById('productCategoryFilter').addEventListener('change', (e)=>{
+    state.productFilterCategory = e.target.value;
+    refreshProductsManageList();
+  });
+  document.getElementById('productPriceMinFilter').addEventListener('input', (e)=>{
+    state.productFilterPriceMin = e.target.value;
+    refreshProductsManageList();
+  });
+  document.getElementById('productPriceMaxFilter').addEventListener('input', (e)=>{
+    state.productFilterPriceMax = e.target.value;
+    refreshProductsManageList();
+  });
+
+  refreshProductsManageList();
+
+  function refreshProductsManageList(){
+    const wrap = document.getElementById('productsManageList');
+    const search = state.productsManageSearch.trim().toLowerCase();
+    const min = state.productFilterPriceMin !== '' ? parseFloat(state.productFilterPriceMin) : null;
+    const max = state.productFilterPriceMax !== '' ? parseFloat(state.productFilterPriceMax) : null;
+
+    let products = loadProducts().slice().sort((a,b)=> (a.code||'').localeCompare(b.code||''));
+    if(search){
+      products = products.filter(p => p.name.toLowerCase().includes(search) || (p.code||'').toLowerCase().includes(search));
+    }
+    if(state.productFilterCategory){
+      products = products.filter(p => p.category === state.productFilterCategory);
+    }
+    if(min !== null && !isNaN(min)){
+      products = products.filter(p => p.price >= min);
+    }
+    if(max !== null && !isNaN(max)){
+      products = products.filter(p => p.price <= max);
+    }
+
+    if(products.length === 0){
+      wrap.innerHTML = `<div class="empty-state">No hay productos para mostrar.</div>`;
+      return;
+    }
+    wrap.innerHTML = products.map(p => `
+      <div class="card product-item">
+        <div class="product-info">
+          <div><span class="pcode">${escapeHtml(p.code || '-')}</span><span class="pcat">${escapeHtml(p.category || 'General')}</span></div>
+          <div class="pname">${escapeHtml(p.name)}</div>
+          <div class="pprice">${formatMoney(p.price)}</div>
+        </div>
+        <div class="product-actions">
+          <button class="btn btn-secondary btn-sm" data-edit-product="${p.id}">✏️ Modificar</button>
+        </div>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('[data-edit-product]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const product = loadProducts().find(p=>p.id === btn.dataset.editProduct);
+        openProductModal(product);
+      });
+    });
+  }
+}
+
+/* ============================================================
+   MODAL: CARGAR / MODIFICAR PRODUCTO
+   ============================================================ */
+function openProductModal(existingProduct){
+  const isEdit = !!existingProduct;
+  const currentCode = isEdit ? existingProduct.code : '';
+  const currentCategory = isEdit ? (existingProduct.category || '') : '';
+  const categories = getProductCategories();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${isEdit ? 'Modificar Producto' : 'Cargar Producto'}</h2>
+      <div class="field-group">
+        <label>Código <span class="required-mark">*</span></label>
+        <input type="text" id="productCodeInput" value="${escapeHtml(currentCode || '')}" placeholder="Ej: 0001">
+        <div class="error-text" id="productCodeError">El código es obligatorio.</div>
+      </div>
+      <div class="field-group">
+        <label>Producto <span class="required-mark">*</span></label>
+        <input type="text" id="productNameInput" value="${isEdit ? escapeHtml(existingProduct.name) : ''}" placeholder="Ej: Harina 0000 1kg">
+        <div class="error-text" id="productNameError">El nombre es obligatorio.</div>
+      </div>
+      <div class="field-group">
+        <label>Precio <span class="required-mark">*</span></label>
+        <input type="number" id="productPriceInput" min="0.01" step="0.01" value="${isEdit ? existingProduct.price : ''}" placeholder="Ej: 850">
+        <div class="error-text" id="productPriceError">El precio debe ser mayor que 0.</div>
+      </div>
+      <div class="field-group">
+        <label>Categoría</label>
+        <input type="text" id="productCategoryInput" list="categoryList" value="${escapeHtml(currentCategory)}" placeholder="Ej: Almacén, Bebidas...">
+        <datalist id="categoryList">
+          ${categories.map(c=>`<option value="${escapeHtml(c)}">`).join('')}
+        </datalist>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="productCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="productSaveBtn">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) document.body.removeChild(overlay); });
+  document.getElementById('productCancelBtn').addEventListener('click', ()=> document.body.removeChild(overlay));
+
+  document.getElementById('productSaveBtn').addEventListener('click', ()=>{
+    const codeInput = document.getElementById('productCodeInput');
+    const nameInput = document.getElementById('productNameInput');
+    const priceInput = document.getElementById('productPriceInput');
+    const categoryInput = document.getElementById('productCategoryInput');
+
+    const code = codeInput.value.trim();
+    const name = nameInput.value.trim();
+    const price = parseFloat(priceInput.value);
+    const category = categoryInput.value.trim() || 'General';
+
+    let valid = true;
+    document.getElementById('productCodeError').classList.remove('show');
+    document.getElementById('productNameError').classList.remove('show');
+    document.getElementById('productPriceError').classList.remove('show');
+
+    if(!code){ document.getElementById('productCodeError').classList.add('show'); valid = false; }
+    if(!name){ document.getElementById('productNameError').classList.add('show'); valid = false; }
+    if(isNaN(price) || price <= 0){ document.getElementById('productPriceError').classList.add('show'); valid = false; }
+    if(!valid) return;
+
+    let products = loadProducts();
+    if(isEdit){
+      const idx = products.findIndex(p=>p.id === existingProduct.id);
+      if(idx > -1){
+        products[idx] = { ...products[idx], code, name, price, category, distrib: DISTRIBUIDORAS[0] };
+      }
+      state.cart.forEach(item=>{
+        if(item.productId === existingProduct.id){
+          item.code = code; item.name = name; item.price = price; item.category = category;
+        }
+      });
+    } else {
+      products.push({ id: uid(), code, name, price, category, distrib: DISTRIBUIDORAS[0] });
+    }
+    saveProducts(products);
+    document.body.removeChild(overlay);
+    showToast(isEdit ? 'Producto actualizado.' : 'Producto guardado.');
+
+    if(state.view === 'orderScreen'){
+      renderProductList();
+      renderCart();
+    } else if(state.view === 'products'){
+      render();
+    }
+  });
+}
+
+/* ============================================================
+   PANTALLA: PEDIDO (facturador — buscador + carrito)
+   ============================================================ */
+function startNewOrder(clientId, distrib){
+  state.currentClientId = clientId;
+  state.currentDistrib = distrib;
+  state.editingOrderId = null;
+  state.cart = [];
+  state.productSearch = '';
+  state.view = 'orderScreen';
+  render();
+}
+
+function renderOrderScreen(){
+  const clients = loadClients();
+  const client = clients.find(c=>c.id === state.currentClientId);
+  if(!client){
+    state.view = 'clients';
+    render();
+    return;
+  }
+
+  setHeader(state.editingOrderId ? 'Modificar Pedido' : 'Nuevo Pedido', true, ()=>{
+    if(confirm('¿Salir del pedido? Se perderán los cambios no finalizados.')){
+      state.view = state.editingOrderId ? 'orders' : 'clients';
+      state.editingOrderId = null;
+      render();
+    }
+  });
+
+  const html = `
+    <div class="summary-box">
+      <div class="line"><span>Cliente:</span><b>${escapeHtml(client.name)}</b></div>
+      <div class="line"><span>Teléfono:</span><b>${escapeHtml(client.phone || '-')}</b></div>
+      ${client.address ? `<div class="line"><span>Dirección:</span><b>${escapeHtml(client.address)}</b></div>` : ''}
+      <div class="line" style="margin-top:6px;"><span>Distribuidora:</span></div>
+      <div class="tag">${escapeHtml(state.currentDistrib)}</div>
+      <button class="btn btn-secondary btn-sm no-print" id="btnEditClientFromOrder" style="margin-top:10px;">✏️ Editar datos del cliente</button>
+    </div>
+
+    <div class="search-wrap">
+      <input type="text" id="productSearchInput" placeholder="🔎 Buscar producto..." value="${escapeHtml(state.productSearch)}">
+    </div>
+
+    <div id="productList"></div>
+
+    <h3 style="margin-top:22px;">Pedido actual</h3>
+    <div class="card" style="padding:8px 10px;">
+      <div id="cartTableWrap"></div>
+    </div>
+
+    <div class="total-bar">
+      <div>
+        <div class="label">TOTAL DEL PEDIDO</div>
+        <div class="amount" id="orderTotalAmount">${formatMoney(0)}</div>
+      </div>
+    </div>
+
+    <div class="row no-print">
+      <button class="btn btn-secondary btn-block" id="btnEmptyOrder">🗑️ Vaciar</button>
+      <button class="btn btn-primary btn-block" id="btnFinishOrder">✅ Finalizar</button>
+    </div>
+    <div class="row no-print" style="margin-top:10px;">
+      <button class="btn btn-danger btn-block" id="btnNoSale">❌ Sin compra — cargar motivo</button>
+    </div>
+    <div class="fab-space"></div>
+  `;
+  mainContainer.innerHTML = html;
+
+  document.getElementById('productSearchInput').addEventListener('input', (e)=>{
+    state.productSearch = e.target.value;
+    renderProductList();
+  });
+  document.getElementById('btnEmptyOrder').addEventListener('click', ()=>{
+    if(state.cart.length === 0) return;
+    if(confirm('¿Vaciar todo el pedido actual?')){
+      state.cart = [];
+      renderCart();
+      renderProductList();
+    }
+  });
+  document.getElementById('btnFinishOrder').addEventListener('click', finishOrder);
+  document.getElementById('btnNoSale').addEventListener('click', ()=> openNoSaleModal(client));
+  document.getElementById('btnEditClientFromOrder').addEventListener('click', ()=> openClientModal(client));
+
+  renderProductList();
+  renderCart();
+}
+
+function renderProductList(){
+  const wrap = document.getElementById('productList');
+  if(!wrap) return;
+  const search = state.productSearch.trim().toLowerCase();
+  const allProducts = loadProducts();
+
+  let products;
+  if(search){
+    products = allProducts.filter(p =>
+      p.name.toLowerCase().includes(search) || (p.code || '').toLowerCase().includes(search)
+    );
+  } else {
+    products = allProducts.slice(0,5);
+  }
+
+  if(products.length === 0){
+    wrap.innerHTML = `<div class="empty-state">No se encontraron productos.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = products.map(p => {
+    const cartItem = state.cart.find(i=>i.productId===p.id);
+    const qty = cartItem ? cartItem.qty : 0;
+    return `
+    <div class="card product-item">
+      <div class="product-info">
+        <div><span class="pcode">${escapeHtml(p.code || '-')}</span><span class="pcat">${escapeHtml(p.category || 'General')}</span></div>
+        <div class="pname">${escapeHtml(p.name)}</div>
+        <div class="pprice">${formatMoney(p.price)}</div>
+      </div>
+      <div class="product-actions">
+        ${qty > 0 ? `
+          <div class="qty-control">
+            <button data-dec-product="${p.id}">−</button>
+            <span>${qty}</span>
+            <button data-add-product="${p.id}">+</button>
+          </div>
+        ` : `
+          <button class="btn btn-primary btn-sm" data-add-product="${p.id}">Agregar</button>
+        `}
+      </div>
+    </div>
+  `;
+  }).join('');
+
+  wrap.querySelectorAll('[data-add-product]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      addProductToCart(btn.dataset.addProduct);
+    });
+  });
+  wrap.querySelectorAll('[data-dec-product]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      decProductFromCart(btn.dataset.decProduct);
+    });
+  });
+}
+
+function addProductToCart(productId){
+  const product = loadProducts().find(p=>p.id === productId);
+  if(!product) return;
+  const existing = state.cart.find(item => item.productId === productId);
+  if(existing){
+    existing.qty += 1;
+  } else {
+    state.cart.push({ productId: product.id, code: product.code, category: product.category, name: product.name, price: product.price, qty: 1 });
+    showToast(`${product.name} agregado.`);
+  }
+  renderCart();
+  renderProductList();
+}
+
+function decProductFromCart(productId){
+  const idx = state.cart.findIndex(item => item.productId === productId);
+  if(idx === -1) return;
+  state.cart[idx].qty -= 1;
+  if(state.cart[idx].qty <= 0){
+    state.cart.splice(idx,1);
+  }
+  renderCart();
+  renderProductList();
+}
+
+function renderCart(){
+  const wrap = document.getElementById('cartTableWrap');
+  const totalEl = document.getElementById('orderTotalAmount');
+  if(!wrap) return;
+
+  if(state.cart.length === 0){
+    wrap.innerHTML = `<div class="empty-state">El pedido está vacío. Agregá productos del catálogo.</div>`;
+    if(totalEl) totalEl.textContent = formatMoney(0);
+    return;
+  }
+
+  let total = 0;
+  const rows = state.cart.map((item, idx) => {
+    const subtotal = item.price * item.qty;
+    total += subtotal;
+    return `
+      <tr>
+        <td>${escapeHtml(item.name)}</td>
+        <td class="num">${formatMoney(item.price)}</td>
+        <td>
+          <div class="qty-control no-print">
+            <button data-dec="${idx}">−</button>
+            <span>${item.qty}</span>
+            <button data-inc="${idx}">+</button>
+          </div>
+          <div class="print-only" style="text-align:center;">${item.qty}</div>
+        </td>
+        <td class="num">${formatMoney(subtotal)}</td>
+        <td class="no-print"><button class="btn-icon" data-remove="${idx}" title="Eliminar">🗑️</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th class="num">P. Unit.</th>
+          <th>Cant.</th>
+          <th class="num">Subtotal</th>
+          <th class="no-print"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  wrap.querySelectorAll('[data-inc]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.cart[btn.dataset.inc].qty += 1;
+      renderCart();
+      renderProductList();
+    });
+  });
+  wrap.querySelectorAll('[data-dec]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const idx = btn.dataset.dec;
+      state.cart[idx].qty -= 1;
+      if(state.cart[idx].qty <= 0){
+        state.cart.splice(idx,1);
+      }
+      renderCart();
+      renderProductList();
+    });
+  });
+  wrap.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.cart.splice(btn.dataset.remove,1);
+      renderCart();
+      renderProductList();
+    });
+  });
+
+  if(totalEl) totalEl.textContent = formatMoney(total);
+}
+
+function getCartTotal(){
+  return state.cart.reduce((sum,item)=> sum + item.price * item.qty, 0);
+}
+
+/* ============================================================
+   MODAL: SIN COMPRA (motivo)
+   ============================================================ */
+function openNoSaleModal(client){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay center';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>Sin compra</h2>
+      <div class="modal-sub">${escapeHtml(client.name)} — ${formatDateAR(todayISO())}</div>
+      <div class="field-group">
+        <label>Motivo <span class="required-mark">*</span></label>
+        <input type="text" id="noSaleReasonInput" list="motivosSugeridos" placeholder="Ej: No tenía stock">
+        <datalist id="motivosSugeridos">
+          ${MOTIVOS_SUGERIDOS.map(m=>`<option value="${escapeHtml(m)}">`).join('')}
+        </datalist>
+        <div class="error-text" id="noSaleReasonError">El motivo es obligatorio.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="noSaleCancelBtn">Cancelar</button>
+        <button class="btn btn-danger" id="noSaleSaveBtn">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) document.body.removeChild(overlay); });
+  document.getElementById('noSaleCancelBtn').addEventListener('click', ()=> document.body.removeChild(overlay));
+
+  document.getElementById('noSaleSaveBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('noSaleReasonInput');
+    const reason = input.value.trim();
+    if(!reason){
+      document.getElementById('noSaleReasonError').classList.add('show');
+      return;
+    }
+    const noSales = loadNoSales();
+    noSales.push({
+      id: uid(),
+      clientId: client.id,
+      clientName: client.name,
+      date: todayISO(),
+      time: nowTimeStr(),
+      reason
+    });
+    saveNoSales(noSales);
+    document.body.removeChild(overlay);
+    showToast('Registrado: sin compra.');
+    state.view = 'clients';
+    state.clientsSubView = 'list';
+    render();
+  });
+}
+
+/* ============================================================
+   FINALIZAR / GUARDAR PEDIDO
+   ============================================================ */
+function finishOrder(){
+  if(state.cart.length === 0){
+    showToast('⚠️ El pedido está vacío. Agregá al menos un producto.');
+    return;
+  }
+
+  const clients = loadClients();
+  const client = clients.find(c=>c.id === state.currentClientId);
+  if(!client) return;
+
+  const total = getCartTotal();
+  let orders = loadOrders();
+
+  const itemsSnapshot = state.cart.map(i=>({
+    productId:i.productId, code:i.code, category:i.category, name:i.name, price:i.price, qty:i.qty, subtotal:i.price*i.qty
+  }));
+
+  if(state.editingOrderId){
+    const idx = orders.findIndex(o=>o.id === state.editingOrderId);
+    if(idx > -1){
+      orders[idx] = {
+        ...orders[idx],
+        clientId: client.id,
+        clientCode: client.code,
+        clientName: client.name,
+        clientPhone: client.phone,
+        clientAddress: client.address,
+        distrib: state.currentDistrib,
+        items: itemsSnapshot,
+        total
+      };
+    }
+    saveOrders(orders);
+    showToast('Pedido guardado correctamente.');
+    state.editingOrderId = null;
+    state.cart = [];
+    state.view = 'orders';
+    render();
+    return;
+  }
+
+  const newOrder = {
+    id: uid(),
+    number: nextOrderNumber(),
+    date: todayISO(),
+    time: nowTimeStr(),
+    clientId: client.id,
+    clientCode: client.code,
+    clientName: client.name,
+    clientPhone: client.phone,
+    clientAddress: client.address,
+    distrib: state.currentDistrib,
+    items: itemsSnapshot,
+    total
+  };
+  orders.push(newOrder);
+  saveOrders(orders);
+
+  showToast('Pedido guardado correctamente.');
+  state.cart = [];
+  state.view = 'orders';
+  render();
+}
+
+/* ============================================================
+   SECCIÓN 4: PEDIDOS DEL DÍA
+   ============================================================ */
+function renderOrdersSection(){
+  setHeader('📋 Pedidos del Día', true, ()=>{ state.view='home'; render(); });
+
+  const html = `
+    <div class="filters-row no-print">
+      <input type="text" id="filterDate" placeholder="Filtrar por fecha AAAA-MM-DD" value="${escapeHtml(state.ordersFilterDate)}">
+    </div>
+    <div class="row no-print">
+      <button class="btn btn-secondary btn-block" id="btnTodayFilter">Solo hoy</button>
+      <button class="btn btn-secondary btn-block" id="btnClearFilter">Ver todos</button>
+    </div>
+    <div class="row no-print">
+      <button class="btn btn-primary btn-block" id="btnHojaCarga">📄 Hoja de Carga</button>
+      <button class="btn btn-primary btn-block" id="btnPrintOrders">🖨️ Imprimir Listado</button>
+    </div>
+    <div id="ordersStats"></div>
+    <div class="print-only print-title">
+      <h2>Listado de Pedidos</h2>
+    </div>
+    <div id="ordersListWrap"></div>
+  `;
+  mainContainer.innerHTML = html;
+
+  document.getElementById('filterDate').addEventListener('input',(e)=>{
+    state.ordersFilterDate = e.target.value.trim();
+    refreshOrdersListing();
+  });
+  document.getElementById('btnTodayFilter').addEventListener('click', ()=>{
+    state.ordersFilterDate = todayISO();
+    document.getElementById('filterDate').value = state.ordersFilterDate;
+    refreshOrdersListing();
+  });
+  document.getElementById('btnClearFilter').addEventListener('click', ()=>{
+    state.ordersFilterDate = '';
+    document.getElementById('filterDate').value = '';
+    refreshOrdersListing();
+  });
+  document.getElementById('btnPrintOrders').addEventListener('click', ()=> window.print());
+  document.getElementById('btnHojaCarga').addEventListener('click', printHojaCarga);
+
+  refreshOrdersListing();
+
+  function refreshOrdersListing(){
+    let orders = loadOrders().slice().sort((a,b)=>{
+      if(a.date === b.date) return b.number - a.number;
+      return a.date < b.date ? 1 : -1;
+    });
+    if(state.ordersFilterDate){
+      orders = orders.filter(o=>o.date === state.ordersFilterDate);
+    }
+
+    const statsWrap = document.getElementById('ordersStats');
+    const totalAmount = orders.reduce((s,o)=>s+o.total,0);
+    statsWrap.innerHTML = `
+      <div class="stats-bar">
+        <div class="stat"><div class="val">${orders.length}</div><div class="lbl">Pedidos</div></div>
+        <div class="stat"><div class="val">${formatMoney(totalAmount)}</div><div class="lbl">Monto total</div></div>
+      </div>
+    `;
+
+    const listWrap = document.getElementById('ordersListWrap');
+    if(orders.length === 0){
+      listWrap.innerHTML = `<div class="empty-state">No hay pedidos para mostrar.</div>`;
+      return;
+    }
+
+    listWrap.innerHTML = orders.map(o => `
+      <div class="card order-card">
+        <div class="order-head">
+          <div>
+            <div class="num">Pedido #${o.number}</div>
+            <div class="date">${formatDateAR(o.date)} <span class="no-print">- ${escapeHtml(o.time)}</span></div>
+          </div>
+        </div>
+        <div class="order-detail">
+          <div><b>${escapeHtml(o.clientName)}</b></div>
+          <div>${escapeHtml(o.clientPhone || '-')}</div>
+          ${o.clientAddress ? `<div>${escapeHtml(o.clientAddress)}</div>` : ''}
+          <ul>
+            ${o.items.map(it=>`<li>${escapeHtml(it.code||'-')} — ${escapeHtml(it.name)} x${it.qty} — ${formatMoney(it.subtotal)}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="order-total">Total: ${formatMoney(o.total)}</div>
+        <div class="order-footer no-print">
+          <button class="btn btn-secondary" data-edit-order="${o.id}">✏️ Modificar</button>
+          <button class="btn btn-secondary" data-edit-client="${o.clientId}">👤 Editar cliente</button>
+          <button class="btn btn-primary" data-remito-order="${o.id}">🧾 Remito</button>
+        </div>
+      </div>
+    `).join('');
+
+    listWrap.querySelectorAll('[data-edit-order]').forEach(btn=>{
+      btn.addEventListener('click', ()=> openOrderForEdit(btn.dataset.editOrder));
+    });
+    listWrap.querySelectorAll('[data-edit-client]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const client = loadClients().find(c=>c.id === btn.dataset.editClient);
+        if(!client){
+          showToast('El cliente de este pedido ya no existe.');
+          return;
+        }
+        openClientModal(client);
+      });
+    });
+    listWrap.querySelectorAll('[data-remito-order]').forEach(btn=>{
+      btn.addEventListener('click', ()=> printRemito(btn.dataset.remitoOrder));
+    });
+  }
+}
+
+function openOrderForEdit(orderId){
+  const order = loadOrders().find(o=>o.id===orderId);
+  if(!order) return;
+  const client = loadClients().find(c=>c.id === order.clientId);
+  if(!client){
+    alert('El cliente de este pedido ya no existe.');
+    return;
+  }
+  state.currentClientId = order.clientId;
+  state.currentDistrib = order.distrib;
+  state.editingOrderId = order.id;
+  state.cart = order.items.map(it => ({ productId: it.productId, code: it.code, category: it.category, name: it.name, price: it.price, qty: it.qty }));
+  state.productSearch = '';
+  state.view = 'orderScreen';
+  render();
+}
+
+/* ============================================================
+   IMPRESIÓN: HOJA DE CARGA
+   ============================================================ */
+function buildHojaCargaItems(orders){
+  const map = {};
+  orders.forEach(o=>{
+    o.items.forEach(it=>{
+      const key = it.productId || it.name;
+      if(!map[key]){
+        map[key] = { code: it.code || '-', name: it.name, qty: 0 };
+      }
+      map[key].qty += it.qty;
+    });
+  });
+  return Object.values(map).sort((a,b)=> (a.code||'').localeCompare(b.code||''));
+}
+
+function printHojaCarga(){
+  let orders = loadOrders();
+  if(state.ordersFilterDate){
+    orders = orders.filter(o=>o.date === state.ordersFilterDate);
+  }
+  if(orders.length === 0){
+    showToast('No hay pedidos para generar la hoja de carga.');
+    return;
+  }
+
+  const items = buildHojaCargaItems(orders);
+  const subtitle = state.ordersFilterDate
+    ? `Fecha: ${formatDateAR(state.ordersFilterDate)}`
+    : `Todos los pedidos (${orders.length})`;
+
+  const rows = items.map(it => `
+    <tr>
+      <td>${escapeHtml(it.code)}</td>
+      <td>${escapeHtml(it.name)}</td>
+      <td class="num">${it.qty}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <h2>Hoja de Carga</h2>
+    <div class="hoja-sub">${escapeHtml(subtitle)}</div>
+    <table class="remito-table">
+      <thead>
+        <tr><th>Código</th><th>Descripción</th><th class="num">Cantidad</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  document.getElementById('hojaPrintArea').innerHTML = html;
+  document.body.classList.add('mode-hoja');
+  window.print();
+}
+
+/* ============================================================
+   IMPRESIÓN: REMITO
+   ============================================================ */
+function printRemito(orderId){
+  const order = loadOrders().find(o=>o.id === orderId);
+  if(!order) return;
+
+  let clientCode = order.clientCode;
+  if(!clientCode){
+    const client = loadClients().find(c=>c.id === order.clientId);
+    clientCode = client ? (client.code || '-') : '-';
+  }
+
+  const rows = order.items.map(it => `
+    <tr>
+      <td>${escapeHtml(it.code || '-')}</td>
+      <td class="num">${it.qty}</td>
+      <td>${escapeHtml(it.name)}</td>
+      <td class="num">${formatMoney(it.price)}</td>
+      <td class="num">${formatMoney(it.subtotal)}</td>
+    </tr>
+  `).join('');
+
+  const initials = EMPRESA.name.split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase();
+  const logoHtml = EMPRESA.logoDataUrl
+    ? `<img src="${EMPRESA.logoDataUrl}" alt="Logo" class="remito-logo">`
+    : `<div class="remito-logo-fallback">${escapeHtml(initials)}</div>`;
+
+  const comprobanteNum = String(order.number).padStart(6,'0');
+
+  const html = `
+    <div class="remito-sheet">
+      <div class="remito-header">
+        <div class="remito-box">
+          <div class="box-label">Cliente N° ${escapeHtml(clientCode)}</div>
+          <div class="big">${escapeHtml(order.clientName)}</div>
+          <div>${escapeHtml(order.clientAddress || '-')}</div>
+          <div>${escapeHtml(order.clientPhone || '-')}</div>
+        </div>
+        <div class="remito-brand-box">
+          <div class="remito-brand-row">
+            <div class="remito-brand-text">
+              <div class="brand-name">${escapeHtml(EMPRESA.name)}</div>
+              <div class="brand-meta">${escapeHtml(EMPRESA.address)}</div>
+              <div class="brand-meta">${escapeHtml(EMPRESA.phone)}</div>
+            </div>
+            ${logoHtml}
+          </div>
+        </div>
+      </div>
+
+      <div class="remito-meta-line">Comprobante ${comprobanteNum}<span class="date">${formatDateAR(order.date)}</span></div>
+
+      <table class="remito-table">
+        <thead>
+          <tr><th>Código</th><th>Cantidad</th><th>Descripción</th><th>P. Unitario</th><th>Precio</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="remito-totals">
+        <div class="line"><span>Subtotal</span><span>${formatMoney(order.total)}</span></div>
+        <div class="line total"><span>Total</span><span>${formatMoney(order.total)}</span></div>
+      </div>
+      <div class="remito-footer-note">Gracias por su compra — ${escapeHtml(EMPRESA.name)}</div>
+    </div>
+  `;
+
+  document.getElementById('remitoPrintArea').innerHTML = html;
+  document.body.classList.add('mode-remito');
+  window.print();
+}
+
+window.addEventListener('afterprint', ()=>{
+  document.body.classList.remove('mode-remito');
+  document.body.classList.remove('mode-hoja');
+});
+
+/* ============================================================
+   SECCIÓN 3: INDICADORES DE VENTA
+   ============================================================ */
+function computeIndicators(orders, noSales){
+  const totalVentas = orders.reduce((s,o)=>s+o.total,0);
+  const clientesCompraronSet = new Set(orders.map(o=>o.clientId));
+  const clientesSinCompraSet = new Set(noSales.map(n=>n.clientId));
+  const clientesCompraron = clientesCompraronSet.size;
+  const clientesSinCompra = clientesSinCompraSet.size;
+  const totalVisitados = clientesCompraron + clientesSinCompra;
+  const efectividad = totalVisitados > 0 ? (clientesCompraron / totalVisitados * 100) : 0;
+
+  const porProductoMap = {};
+  const porCategoriaMap = {};
+  orders.forEach(o=>{
+    o.items.forEach(it=>{
+      const key = it.productId || it.name;
+      if(!porProductoMap[key]) porProductoMap[key] = { code: it.code||'-', name: it.name, qty:0, monto:0 };
+      porProductoMap[key].qty += it.qty;
+      porProductoMap[key].monto += it.subtotal;
+
+      const cat = it.category || 'General';
+      porCategoriaMap[cat] = (porCategoriaMap[cat]||0) + it.subtotal;
+    });
+  });
+
+  return {
+    totalVentas, clientesCompraron, clientesSinCompra, totalVisitados, efectividad,
+    cantidadPedidos: orders.length,
+    porProducto: Object.values(porProductoMap).sort((a,b)=>b.monto-a.monto),
+    porCategoria: Object.entries(porCategoriaMap).sort((a,b)=>b[1]-a[1])
+  };
+}
+
+function renderIndicatorStatsHtml(stats){
+  return `
+    <div class="stats-bar">
+      <div class="stat"><div class="val">${formatMoney(stats.totalVentas)}</div><div class="lbl">Total vendido</div></div>
+      <div class="stat"><div class="val">${stats.efectividad.toFixed(0)}%</div><div class="lbl">Efectividad</div></div>
+      <div class="stat"><div class="val">${stats.clientesCompraron}</div><div class="lbl">Compraron</div></div>
+      <div class="stat"><div class="val">${stats.clientesSinCompra}</div><div class="lbl">Sin compra</div></div>
+      <div class="stat"><div class="val">${stats.cantidadPedidos}</div><div class="lbl">Pedidos</div></div>
+    </div>
+  `;
+}
+
+function renderRankingsHtml(stats){
+  const productRows = stats.porProducto.length === 0
+    ? `<tr><td colspan="4" style="text-align:center;color:var(--muted);">Sin ventas</td></tr>`
+    : stats.porProducto.map(p=>`
+        <tr>
+          <td>${escapeHtml(p.code)}</td>
+          <td>${escapeHtml(p.name)}</td>
+          <td class="num">${p.qty}</td>
+          <td class="num">${formatMoney(p.monto)}</td>
+        </tr>
+      `).join('');
+
+  const catRows = stats.porCategoria.length === 0
+    ? `<tr><td colspan="2" style="text-align:center;color:var(--muted);">Sin ventas</td></tr>`
+    : stats.porCategoria.map(([cat,monto])=>`
+        <tr><td>${escapeHtml(cat)}</td><td class="num">${formatMoney(monto)}</td></tr>
+      `).join('');
+
+  return `
+    <div class="ranking-title">Venta por producto</div>
+    <div class="card" style="padding:8px 10px;">
+      <table>
+        <thead><tr><th>Código</th><th>Producto</th><th class="num">Cant.</th><th class="num">Monto</th></tr></thead>
+        <tbody>${productRows}</tbody>
+      </table>
+    </div>
+    <div class="ranking-title">Venta por categoría</div>
+    <div class="card" style="padding:8px 10px;">
+      <table>
+        <thead><tr><th>Categoría</th><th class="num">Monto</th></tr></thead>
+        <tbody>${catRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderIndicatorsSection(){
+  setHeader('📊 Indicadores de Venta', true, ()=>{ state.view='home'; render(); });
+
+  if(!state.indicatorsDate) state.indicatorsDate = todayISO();
+  if(!state.indicatorsMonth) state.indicatorsMonth = currentMonthISO();
+
+  mainContainer.innerHTML = `
+    <div class="view-toggle">
+      <button id="btnIndDaily" class="${state.indicatorsSubView==='daily'?'active':''}">📅 Diario</button>
+      <button id="btnIndMonthly" class="${state.indicatorsSubView==='monthly'?'active':''}">🗓️ Mensual</button>
+    </div>
+    <div id="indicatorsArea"></div>
+  `;
+
+  document.getElementById('btnIndDaily').addEventListener('click', ()=>{ state.indicatorsSubView='daily'; render(); });
+  document.getElementById('btnIndMonthly').addEventListener('click', ()=>{ state.indicatorsSubView='monthly'; render(); });
+
+  if(state.indicatorsSubView === 'monthly'){
+    renderIndicatorsMonthly();
+  } else {
+    renderIndicatorsDaily();
+  }
+}
+
+function renderIndicatorsDaily(){
+  const area = document.getElementById('indicatorsArea');
+  area.innerHTML = `
+    <div class="field-group" style="margin-bottom:14px;">
+      <label style="margin-top:0;">Día a analizar</label>
+      <input type="date" id="indDateInput" value="${state.indicatorsDate}">
+    </div>
+    <div id="indDailyContent"></div>
+  `;
+  document.getElementById('indDateInput').addEventListener('change',(e)=>{
+    state.indicatorsDate = e.target.value || todayISO();
+    refreshDaily();
+  });
+  refreshDaily();
+
+  function refreshDaily(){
+    const orders = loadOrders().filter(o=>o.date === state.indicatorsDate);
+    const noSales = loadNoSales().filter(n=>n.date === state.indicatorsDate);
+    const stats = computeIndicators(orders, noSales);
+    document.getElementById('indDailyContent').innerHTML = `
+      <div class="modal-sub" style="margin-bottom:6px;">${formatDateAR(state.indicatorsDate)}</div>
+      ${renderIndicatorStatsHtml(stats)}
+      ${renderRankingsHtml(stats)}
+    `;
+  }
+}
+
+let monthlyChartInstance = null;
+
+function getDaysInMonth(monthStr){
+  const [y,m] = monthStr.split('-').map(Number);
+  return new Date(y,m,0).getDate();
+}
+
+function renderIndicatorsMonthly(){
+  const area = document.getElementById('indicatorsArea');
+  area.innerHTML = `
+    <div class="field-group" style="margin-bottom:14px;">
+      <label style="margin-top:0;">Mes a analizar</label>
+      <input type="month" id="indMonthInput" value="${state.indicatorsMonth}">
+    </div>
+    <div id="indMonthlyContent"></div>
+  `;
+  document.getElementById('indMonthInput').addEventListener('change',(e)=>{
+    state.indicatorsMonth = e.target.value || currentMonthISO();
+    refreshMonthly();
+  });
+  refreshMonthly();
+
+  function refreshMonthly(){
+    const monthStr = state.indicatorsMonth;
+    const orders = loadOrders().filter(o=>o.date.startsWith(monthStr));
+    const noSales = loadNoSales().filter(n=>n.date.startsWith(monthStr));
+    const stats = computeIndicators(orders, noSales);
+
+    const daysInMonth = getDaysInMonth(monthStr);
+    const dailyTotals = new Array(daysInMonth).fill(0);
+    orders.forEach(o=>{
+      const day = parseInt(o.date.split('-')[2],10);
+      if(day>=1 && day<=daysInMonth) dailyTotals[day-1] += o.total;
+    });
+
+    document.getElementById('indMonthlyContent').innerHTML = `
+      <div class="modal-sub" style="margin-bottom:6px;">Mes: ${escapeHtml(monthStr)}</div>
+      ${renderIndicatorStatsHtml(stats)}
+      <div class="chart-wrap">
+        <h4>Venta por día del mes</h4>
+        <canvas id="monthlyChart" height="180"></canvas>
+      </div>
+      ${renderRankingsHtml(stats)}
+    `;
+
+    if(typeof Chart !== 'undefined'){
+      const ctx = document.getElementById('monthlyChart').getContext('2d');
+      if(monthlyChartInstance){
+        monthlyChartInstance.destroy();
+        monthlyChartInstance = null;
+      }
+      monthlyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dailyTotals.map((_,i)=> String(i+1)),
+          datasets: [{
+            label: 'Venta ($)',
+            data: dailyTotals,
+            backgroundColor: '#2563eb'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display:false } },
+          scales: { y: { beginAtZero:true } }
+        }
+      });
+    } else {
+      document.getElementById('monthlyChart').outerHTML = '<div class="empty-state">No se pudo cargar el gráfico (sin conexión a internet).</div>';
+    }
+  }
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+seedDataIfEmpty();
+migrateNormalizeData();
+render();
+</script>
+</body>
+</html>
